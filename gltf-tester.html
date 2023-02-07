@@ -12,7 +12,7 @@
   <body>
     <script src="js/three.js"></script>
     <!-- Import maps polyfill -->
-    <!-- Remove this when import maps will be widely supported 
+    <!-- Remove this when import maps will be widely supported -->
     <script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
     <script type="importmap">
       {
@@ -21,8 +21,134 @@
           "three/addons/": "./jsm/"
         }
       }
-    </script>-->
-    <script type="module" src="js/gltf_loader.js"></script>
+    </script>
+    <script type="module">
+
+      /*IMPORTS*/
+      import * as THREE from 'three';
+
+      import { NodeMaterial, float, texture, mul } from 'three/nodes';
+
+      import { nodeFrame } from 'three/addons/renderers/webgl/nodes/WebGLNodes.js';
+
+      import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+      import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+      import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+
+      /*INIT FUNCTION*/
+
+      let camera, scene, renderer, controls;
+
+      init();
+
+      function init() {
+
+        /*SCENE SETUP*/
+
+        const container = document.createElement( 'div' );
+        document.body.appendChild( container );
+
+        camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.25, 20 );
+        camera.position.set( 0, 0.4, 0.7 );
+
+        scene = new THREE.Scene();
+
+        /*LOAD BACKGROUND TEXTURE*/
+
+        new RGBELoader()
+          .setPath( 'textures/equirectangular/' )
+          .load( 'royal_esplanade_1k.hdr', function ( envMap ) {
+
+            envMap.mapping = THREE.EquirectangularReflectionMapping;
+
+            scene.background = envMap;
+            scene.environment = envMap;
+
+            render();
+
+            // model
+
+            new GLTFLoader()
+              .setPath( 'models/' )
+              .setDRACOLoader( new DRACOLoader().setDecoderPath( 'jsm/libs/draco/gltf/' ) )
+              .load( 'material_tt.glb', function ( gltf ) {
+
+                // nodes
+                /*
+                const glassMesh = gltf.scene.getObjectByName( 'glassCover' );
+
+                const material = glassMesh.material;
+
+                if ( material && material.transmission > 0 ) {
+
+                  const nodeMaterial = NodeMaterial.fromMaterial( material );
+                  nodeMaterial.transmissionNode = float( 1 );
+                  nodeMaterial.iorNode = float( 1.5 );
+                  nodeMaterial.thicknessNode = mul( texture( material.thicknessMap ).g, 0.1 );
+                  //nodeMaterial.attenuationDistanceNode;
+                  //nodeMaterial.attenuationColorNode;
+
+                  // ignore traditional maps
+                  nodeMaterial.transmissionMap = null;
+                  nodeMaterial.thicknessMap = null;
+
+                  glassMesh.material = nodeMaterial;
+
+                }*/
+
+                scene.add( gltf.scene );
+
+                render();
+
+              } );
+
+          } );
+
+          //RENDER SETTINGS
+
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        container.appendChild( renderer.domElement );
+
+        controls = new OrbitControls( camera, renderer.domElement );
+        controls.enableDamping = true;
+        controls.minDistance = 0.5;
+        controls.maxDistance = 1;
+        controls.target.set( 0, 0.1, 0 );
+        controls.update();
+
+        window.addEventListener( 'resize', onWindowResize );
+
+      }
+
+      function onWindowResize() {
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+        render();
+
+      }
+
+      //
+
+      function render() {
+
+        //nodeFrame.update();
+
+        renderer.render( scene, camera );
+
+      }
+
+    </script>
   </body>  
   <script>includeHTML();</script>
 </html>
